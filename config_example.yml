@@ -1,0 +1,21 @@
+# 项目名称, 用来向 JumpServer 注册。不填时按主机名生成。
+# NAME: sshproxy
+
+# JumpServer Core 的 URL, 后续注册和用户认证会使用
+CORE_HOST: http://127.0.0.1:8080
+
+# Bootstrap Token, 预共享密钥, 用来注册组件使用的 service account。
+# 请和 JumpServer 配置文件中保持一致, 注册完成后可以删除。
+BOOTSTRAP_TOKEN: <PleaseChangeSameWithJumpserver>
+
+# 启动时绑定的 IP, 默认 0.0.0.0
+# BIND_HOST: 0.0.0.0
+
+# 监听的 SSH 端口, 默认 1024
+# SSHD_PORT: "1024"
+
+# 日志级别 [DEBUG, INFO, WARN, ERROR]
+# LOG_LEVEL: INFO
+
+# 调用 Core API 的超时时间, 单位秒, 默认 30
+# HTTP_REQUEST_TIMEOUT: 30
