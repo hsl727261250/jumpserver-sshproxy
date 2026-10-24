@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,10 +15,12 @@ type Config struct {
 	Name               string `yaml:"NAME"`
 	CoreHost           string `yaml:"CORE_HOST"`
 	BootstrapToken     string `yaml:"BOOTSTRAP_TOKEN"`
-	BindHost           string `yaml:"BIND_HOST"`
-	SSHPort            string `yaml:"SSHD_PORT"`
 	LogLevel           string `yaml:"LOG_LEVEL"`
 	HttpRequestTimeout int    `yaml:"HTTP_REQUEST_TIMEOUT"`
+	TerminalType       string `yaml:"TERMINAL_TYPE"`
+	ForwardDialTimeout int    `yaml:"FORWARD_DIAL_TIMEOUT"`
+	MaxIdleMinutes     int    `yaml:"MAX_IDLE_MINUTES"`
+	MaxSessionHours    int    `yaml:"MAX_SESSION_HOURS"`
 
 	RootPath          string `yaml:"-"`
 	DataFolderPath    string `yaml:"-"`
@@ -40,11 +41,11 @@ func GetConf() Config {
 
 func Setup(configPath string) {
 	conf := getDefaultConfig()
-	loadConfigFromEnv(&conf)
 	loadConfigFromFile(configPath, &conf)
+	applyCoreEnv(&conf)
 	GlobalConfig = &conf
 	log.Printf("Config loaded: name=%q bind=%s ssh_port=%s core=%s\n",
-		conf.Name, conf.BindHost, conf.SSHPort, conf.CoreHost)
+		conf.Name, ListenHost, ListenPort, conf.CoreHost)
 }
 
 func getDefaultConfig() Config {
@@ -60,10 +61,12 @@ func getDefaultConfig() Config {
 	return Config{
 		Name:               getDefaultName(),
 		CoreHost:           "http://127.0.0.1:8080",
-		BindHost:           "0.0.0.0",
-		SSHPort:            "1024",
 		LogLevel:           "INFO",
 		HttpRequestTimeout: 30,
+		TerminalType:       "koko",
+		ForwardDialTimeout: 15,
+		MaxIdleMinutes:     30,
+		MaxSessionHours:    24,
 		RootPath:           rootPath,
 		DataFolderPath:     dataFolderPath,
 		LogDirPath:         logDirPath,
@@ -73,24 +76,12 @@ func getDefaultConfig() Config {
 	}
 }
 
-func loadConfigFromEnv(conf *Config) {
-	setString := func(key string, dst *string) {
-		if value, ok := os.LookupEnv(key); ok {
-			*dst = value
-		}
+func applyCoreEnv(conf *Config) {
+	if value, ok := os.LookupEnv("CORE_HOST"); ok && value != "" {
+		conf.CoreHost = value
 	}
-	setString("NAME", &conf.Name)
-	setString("CORE_HOST", &conf.CoreHost)
-	setString("BOOTSTRAP_TOKEN", &conf.BootstrapToken)
-	setString("BIND_HOST", &conf.BindHost)
-	setString("SSHD_PORT", &conf.SSHPort)
-	setString("LOG_LEVEL", &conf.LogLevel)
-	if value, ok := os.LookupEnv("HTTP_REQUEST_TIMEOUT"); ok {
-		timeout, err := strconv.Atoi(value)
-		if err != nil {
-			log.Fatalf("Invalid HTTP_REQUEST_TIMEOUT %q: %s", value, err)
-		}
-		conf.HttpRequestTimeout = timeout
+	if value, ok := os.LookupEnv("BOOTSTRAP_TOKEN"); ok && value != "" {
+		conf.BootstrapToken = value
 	}
 }
 
@@ -116,6 +107,11 @@ func getPwdDirPath() string {
 	}
 	return rootPath
 }
+
+const (
+	ListenHost = "0.0.0.0"
+	ListenPort = "1024"
+)
 
 const (
 	prefixName        = "[SSHProxy]-"

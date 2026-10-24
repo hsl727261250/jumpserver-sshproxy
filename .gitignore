@@ -16,6 +16,7 @@ data/
 log/
 vendor/
 config.yml
+.env
 
 .DS_Store
 .idea/

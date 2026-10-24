@@ -1,0 +1,19 @@
+services:
+  sshproxy:
+    image: ${SSHPROXY_IMAGE}:${SSHPROXY_VERSION}
+    restart: unless-stopped
+    ports:
+      - ${SSHPROXY_PORT}:1024
+    environment:
+      CORE_HOST: ${CORE_HOST}
+      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN}
+    volumes:
+      - ${SSHPROXY_DATA_DIR}:/opt/sshproxy/data
+      - ./config.yml:/opt/sshproxy/config.yml:ro
+    networks:
+      - core
+
+networks:
+  core:
+    external: true
+    name: ${SSHPROXY_NETWORK}
