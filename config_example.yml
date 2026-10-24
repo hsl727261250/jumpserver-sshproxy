@@ -12,7 +12,7 @@ LOG_LEVEL: INFO
 HTTP_REQUEST_TIMEOUT: 30
 
 # 向 Core 注册时使用的终端类型。Core 没有 sshproxy 类型。
-# 本组件不心跳, 也不领取终端任务。
+# 状态上报使用这个类型下的独立组件，不领取终端任务。
 TERMINAL_TYPE: koko
 
 # direct-tcpip 拨号超时, 单位秒

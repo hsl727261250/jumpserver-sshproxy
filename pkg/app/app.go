@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,6 +10,7 @@ import (
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/config"
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/logger"
+	"github.com/jumpserver/jumpserver-sshproxy/pkg/session"
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/sshd"
 )
 
@@ -33,10 +35,14 @@ func RunForever(confPath string) {
 	if err := core.EnsureAccessKey(conf.AccessKeyFilePath, conf.Name, conf.TerminalType, conf.BootstrapToken); err != nil {
 		logger.Fatalf("Prepare access key failed: %s", err)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go core.KeepAlive(ctx, session.Online)
 	gracefulStop := make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	app := &App{sshSrv: sshd.NewSSHServer(core)}
 	app.Start()
 	<-gracefulStop
+	cancel()
 	app.Stop()
 }

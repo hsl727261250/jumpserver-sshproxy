@@ -70,13 +70,17 @@ func (a *Authenticator) finish(ctx ssh.Context, client *jmsauth.UserClient, resu
 		s := session.New(result.User.Username)
 		session.Store(ctx, s)
 		logger.Infof("SSH conn[%s] session started user=%s", ctx.SessionID(), result.User.Username)
-		go session.Watch(ctx, s, a.idle, a.max, func() io.Closer {
-			conn, _ := ctx.Value(ssh.ContextKeyConn).(*gossh.ServerConn)
-			if conn == nil {
-				return nil
-			}
-			return conn
-		})
+		session.Enter()
+		go func() {
+			defer session.Leave()
+			session.Watch(ctx, s, a.idle, a.max, func() io.Closer {
+				conn, _ := ctx.Value(ssh.ContextKeyConn).(*gossh.ServerConn)
+				if conn == nil {
+					return nil
+				}
+				return conn
+			})
+		}()
 		return nil
 	case jmsauth.PhaseMFA:
 		client.Choices = usableMFA(result.Choices)

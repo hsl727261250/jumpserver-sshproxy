@@ -1,4 +1,4 @@
-package sshd
+package sshproxy_test
 
 import (
 	"io"
@@ -12,16 +12,17 @@ import (
 
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/config"
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/pkg/sshd"
 )
 
 func TestAllowLocalForwardRequiresSession(t *testing.T) {
-	if AllowLocalForward(nil, "10.0.0.8", 5432) {
+	if sshd.AllowLocalForward(nil, "10.0.0.8", 5432) {
 		t.Fatal("nil context allowed forwarding")
 	}
 }
 
 func TestForwardAfterPasswordAuth(t *testing.T) {
-	coreServer := httptestServer(t)
+	coreServer := httptestCore(t)
 	dir := t.TempDir()
 	config.GlobalConfig = &config.Config{
 		HostKeyFilePath:    filepath.Join(dir, "host_key"),
@@ -43,7 +44,7 @@ func TestForwardAfterPasswordAuth(t *testing.T) {
 		_, _ = io.Copy(conn, conn)
 	}()
 
-	server := NewSSHServer(coreServer)
+	server := sshd.NewSSHServer(coreServer)
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -81,16 +82,13 @@ func TestForwardAfterPasswordAuth(t *testing.T) {
 	}
 }
 
-func httptestServer(t *testing.T) *jmsauth.Core {
+func httptestCore(t *testing.T) *jmsauth.Core {
 	t.Helper()
-	server := newHTTPServer(t, func(w http.ResponseWriter, r *http.Request) {
+	address := newHTTPServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"token":"token-1","user":{"id":"u1","username":"alice"}}`))
 	})
-	return jmsauth.NewCore(server, jmsauth.AccessKey{
-		ID:     "test-ak",
-		Secret: "0123456789abcdef0123456789abcdef",
-	}, time.Second)
+	return jmsauth.NewCore(address, testKey(), time.Second)
 }
 
 func newHTTPServer(t *testing.T, handler http.HandlerFunc) string {

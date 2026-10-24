@@ -4,7 +4,7 @@ SSHProxy 是一个 SSH 隧道组件。它监听 `1024` 端口，使用 JumpServe
 
 认证成功后，客户端可以用这条 SSH 连接转发任意 TCP 流量，例如 `ssh -L` 和 `ssh -D`。组件不提供交互式 shell，也不提供 SFTP。
 
-启动时用 `BOOTSTRAP_TOKEN` 向 JumpServer Core 注册，并保存 AccessKey。之后的认证请求都带服务账号签名，Core 才能记录真实的客户端 IP。注册类型默认是 `koko`，因为 Core 目前没有单独的 sshproxy 类型。本组件不发送心跳，也不领取终端任务。
+启动时用 `BOOTSTRAP_TOKEN` 向 JumpServer Core 注册，并保存 AccessKey。之后的认证请求和状态上报都带服务账号签名，Core 才能记录真实的客户端 IP。注册类型默认是 `koko`，因为 Core 目前没有单独的 sshproxy 类型。进程每 20 秒向 Core 上报 CPU 负载、内存、磁盘，以及当前进程里的 SSH 连接数。这个连接数只在内存里计数，重启后从 0 开始，也不会写成 Core 会话。状态接口返回的终端任务会被忽略。
 
 ## 打包
 

@@ -1,4 +1,4 @@
-package jmsauth
+package sshproxy_test
 
 import (
 	"crypto/aes"
@@ -6,12 +6,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
 )
 
 func TestServiceSignatureRoundTrip(t *testing.T) {
-	key := AccessKey{ID: "ak", Secret: "0123456789abcdef0123456789abcdef"}
+	key := jmsauth.AccessKey{ID: "ak", Secret: "0123456789abcdef0123456789abcdef"}
 	now := time.Unix(1_700_000_000, 0)
-	signature, err := ServiceSignature(key, now)
+	signature, err := jmsauth.ServiceSignature(key, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +25,7 @@ func TestServiceSignatureRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block, err := aes.NewCipher(paddingKey([]byte(key.Secret)))
+	block, err := aes.NewCipher(signatureKey([]byte(strings.ReplaceAll(key.Secret, "-", ""))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,4 +34,16 @@ func TestServiceSignatureRoundTrip(t *testing.T) {
 	if got := strings.TrimRight(string(plain), "\x00"); got != "1700000000" {
 		t.Fatalf("timestamp %q", got)
 	}
+}
+
+func signatureKey(key []byte) []byte {
+	if len(key) >= 32 {
+		out := make([]byte, 32)
+		copy(out, key[:32])
+		return out
+	}
+	for len(key)%aes.BlockSize != 0 {
+		key = append(key, 0)
+	}
+	return key
 }

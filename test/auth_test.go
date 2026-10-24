@@ -1,8 +1,7 @@
-package auth
+package sshproxy_test
 
 import (
 	"context"
-	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -12,13 +11,14 @@ import (
 
 	"github.com/gliderlabs/ssh"
 
+	"github.com/jumpserver/jumpserver-sshproxy/pkg/auth"
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
 	"github.com/jumpserver/jumpserver-sshproxy/pkg/session"
 )
 
 func TestPasswordSuccess(t *testing.T) {
 	core := coreWith(t, func(w http.ResponseWriter, r *http.Request) {
-		writeAuthJSON(w, http.StatusCreated, map[string]any{
+		writeJSON(w, http.StatusCreated, map[string]any{
 			"token": "token-1",
 			"user":  map[string]string{"id": "u1", "username": "alice"},
 		})
@@ -26,7 +26,7 @@ func TestPasswordSuccess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fake := newFake(ctx, "alice")
-	err := NewAuthenticator(core, 0, 0).Password(fake, "secret")
+	err := auth.NewAuthenticator(core, 0, 0).Password(fake, "secret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,16 +39,16 @@ func TestOTPRequiredAndRejected(t *testing.T) {
 	core := coreWith(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v1/authentication/mfa/challenge/":
-			writeAuthJSON(w, http.StatusUnauthorized, map[string]string{"error": "mfa_failed", "msg": "invalid"})
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "mfa_failed", "msg": "invalid"})
 		default:
-			writeAuthJSON(w, http.StatusOK, map[string]any{
+			writeJSON(w, http.StatusOK, map[string]any{
 				"error": "mfa_required",
 				"data":  map[string]any{"choices": []string{"otp"}},
 			})
 		}
 	})
 	fake := newFake(context.Background(), "alice")
-	err := NewAuthenticator(core, 0, 0).Password(fake, "secret")
+	err := auth.NewAuthenticator(core, 0, 0).Password(fake, "secret")
 	partial, ok := err.(*ssh.PartialSuccessError)
 	if !ok || partial.Next.KeyboardInteractiveCallback == nil {
 		t.Fatalf("expected partial success, got %v", err)
@@ -101,14 +101,5 @@ func coreWith(t *testing.T, handler http.HandlerFunc) *jmsauth.Core {
 	t.Helper()
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
-	return jmsauth.NewCore(server.URL, jmsauth.AccessKey{
-		ID:     "test-ak",
-		Secret: "0123456789abcdef0123456789abcdef",
-	}, time.Second)
-}
-
-func writeAuthJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
+	return jmsauth.NewCore(server.URL, testKey(), time.Second)
 }

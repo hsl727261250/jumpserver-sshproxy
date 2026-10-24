@@ -1,4 +1,4 @@
-package jmsauth
+package sshproxy_test
 
 import (
 	"encoding/json"
@@ -7,14 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
 )
 
-func testKey() AccessKey {
-	return AccessKey{ID: "test-ak", Secret: "0123456789abcdef0123456789abcdef"}
-}
-
 func TestAuthenticatePasswordAndSignature(t *testing.T) {
-	var seen SignCapture
+	var seen signCapture
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		seen.record(r)
 		if r.URL.Path != "/api/v1/authentication/tokens/" {
@@ -27,7 +25,7 @@ func TestAuthenticatePasswordAndSignature(t *testing.T) {
 	}))
 	defer server.Close()
 
-	core := NewCore(server.URL, testKey(), time.Second)
+	core := jmsauth.NewCore(server.URL, testKey(), time.Second)
 	client, err := core.UserClient()
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +34,7 @@ func TestAuthenticatePasswordAndSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Phase != PhaseSuccess || result.User.ID != "u1" {
+	if result.Phase != jmsauth.PhaseSuccess || result.User.ID != "u1" {
 		t.Fatalf("result %+v", result)
 	}
 	if !seen.hasPrefix("X-Jms-Svc", "Sign test-ak:") {
@@ -82,7 +80,7 @@ func TestAuthenticateOTP(t *testing.T) {
 	}))
 	defer server.Close()
 
-	core := NewCore(server.URL, testKey(), time.Second)
+	core := jmsauth.NewCore(server.URL, testKey(), time.Second)
 	client, err := core.UserClient()
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +89,7 @@ func TestAuthenticateOTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Phase != PhaseMFA {
+	if result.Phase != jmsauth.PhaseMFA {
 		t.Fatalf("phase %v", result.Phase)
 	}
 	if err = client.VerifyMFA(t.Context(), "otp", "654321"); err != nil {
@@ -101,7 +99,7 @@ func TestAuthenticateOTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Phase != PhaseSuccess || result.User.Username != "alice" {
+	if result.Phase != jmsauth.PhaseSuccess || result.User.Username != "alice" {
 		t.Fatalf("result %+v", result)
 	}
 
@@ -135,7 +133,7 @@ func TestRegister(t *testing.T) {
 	}))
 	defer server.Close()
 
-	core := NewCore(server.URL, AccessKey{}, time.Second)
+	core := jmsauth.NewCore(server.URL, jmsauth.AccessKey{}, time.Second)
 	key, err := core.Register(t.Context(), "sshproxy", "koko", "secret-token")
 	if err != nil {
 		t.Fatal(err)
@@ -144,10 +142,10 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("key %+v", key)
 	}
 	path := t.TempDir() + "/.access_key"
-	if err = SaveAccessKey(path, key); err != nil {
+	if err = jmsauth.SaveAccessKey(path, key); err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := LoadAccessKey(path)
+	loaded, err := jmsauth.LoadAccessKey(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,28 +154,22 @@ func TestRegister(t *testing.T) {
 	}
 }
 
-type SignCapture struct {
+type signCapture struct {
 	headerValues http.Header
 	body         map[string]string
 }
 
-func (s *SignCapture) record(r *http.Request) {
+func (s *signCapture) record(r *http.Request) {
 	s.headerValues = r.Header.Clone()
 	content, _ := io.ReadAll(r.Body)
 	_ = json.Unmarshal(content, &s.body)
 }
 
-func (s SignCapture) header(name string) string {
+func (s signCapture) header(name string) string {
 	return s.headerValues.Get(name)
 }
 
-func (s SignCapture) hasPrefix(name, prefix string) bool {
+func (s signCapture) hasPrefix(name, prefix string) bool {
 	value := s.header(name)
 	return len(value) >= len(prefix) && value[:len(prefix)] == prefix
-}
-
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
 }
