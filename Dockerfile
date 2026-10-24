@@ -1,6 +1,9 @@
 FROM debian:trixie-slim
 
-RUN apt-get update \
+# trixie-slim 使用 DEB822 源。阿里云同时镜像 /debian 与 /debian-security，
+# 只替换主机名即可。安装 ca-certificates 之前使用 HTTP。
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 

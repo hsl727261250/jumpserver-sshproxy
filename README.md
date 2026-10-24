@@ -16,7 +16,7 @@ SSHProxy 是一个 SSH 隧道组件。它监听 `1024` 端口，使用 JumpServe
 
 脚本用本机 Go 编译 Linux 二进制 `sshproxy`，再执行 `docker build` 生成本地镜像。标签来自 `.env` 里的 `SSHPROXY_IMAGE` 和 `SSHPROXY_VERSION`；还没有 `.env` 时使用 `example.env`。镜像内不安装 Go，也不在镜像里编译。脚本不登录仓库，也不推送镜像。
 
-`go build` 使用本机已有的 Go 模块缓存。`docker build` 使用本地的 `debian:trixie-slim`，并在镜像里通过 Debian 软件源安装 `ca-certificates` 和 `curl`。
+`go build` 使用本机已有的 Go 模块缓存。`docker build` 使用本地的 `debian:trixie-slim`，构建时把 apt 源换成阿里云开源镜像站，再安装 `ca-certificates` 和 `curl`。
 
 运行镜像基于 `debian:trixie-slim`。`Dockerfile` 只复制根目录的 `sshproxy`、`entrypoint.sh` 和 `config_example.yml`。工作目录是 `/opt/sshproxy`，监听端口是 `1024`，数据目录是 `/opt/sshproxy/data`。根目录的 `sshproxy` 已被 `.gitignore` 忽略。
 
