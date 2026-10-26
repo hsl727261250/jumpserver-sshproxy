@@ -2,7 +2,11 @@ package jmsauth_test
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,8 +30,9 @@ type statusBody struct {
 
 func TestReportStatus(t *testing.T) {
 	var seen struct {
-		header string
-		body   statusBody
+		authorization string
+		date          string
+		body          statusBody
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != statusPath {
@@ -36,7 +41,8 @@ func TestReportStatus(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method %s", r.Method)
 		}
-		seen.header = r.Header.Get("X-JMS-SVC")
+		seen.authorization = r.Header.Get("Authorization")
+		seen.date = r.Header.Get("Date")
 		content, _ := io.ReadAll(r.Body)
 		if err := json.Unmarshal(content, &seen.body); err != nil {
 			t.Errorf("decode %s", err)
@@ -46,12 +52,20 @@ func TestReportStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	core := jmsauth.NewCore(server.URL, testKey(), time.Second)
+	key := testKey()
+	core := jmsauth.NewCore(server.URL, key, time.Second)
 	if err := core.ReportStatus(t.Context(), 3); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(seen.header, "Sign test-ak:") {
-		t.Fatalf("signature %q", seen.header)
+	if seen.date == "" || !strings.HasSuffix(seen.date, "GMT") {
+		t.Fatalf("date %q", seen.date)
+	}
+	signing := fmt.Sprintf("(request-target): post %s\ndate: %s", statusPath, seen.date)
+	mac := hmac.New(sha256.New, []byte(key.Secret))
+	mac.Write([]byte(signing))
+	want := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	if !strings.Contains(seen.authorization, `keyId="test-ak"`) || !strings.Contains(seen.authorization, want) {
+		t.Fatalf("authorization %q", seen.authorization)
 	}
 	if seen.body.SessionOnline != 3 {
 		t.Fatalf("sessions %d", seen.body.SessionOnline)

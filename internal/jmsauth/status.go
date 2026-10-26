@@ -44,12 +44,11 @@ func (c *Core) ReportStatus(ctx context.Context, sessions int) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "JumpServer-SSHProxy")
-	sign, err := ServiceSignature(c.Key, time.Now())
-	if err != nil {
+	if err = setAccessKeyAuth(req, c.Key, time.Now()); err != nil {
 		return err
 	}
-	req.Header.Set("X-JMS-SVC", sign)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return err
