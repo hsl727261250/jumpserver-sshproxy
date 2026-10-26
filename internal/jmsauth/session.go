@@ -63,7 +63,9 @@ func (c *Core) CreateSession(ctx context.Context, spec SessionSpec) (string, err
 	if err != nil {
 		return "", fmt.Errorf("create session: %w", err)
 	}
-	var created coreSession
+	var created struct {
+		ID string `json:"id"`
+	}
 	if err = json.Unmarshal(content, &created); err != nil {
 		return "", fmt.Errorf("create session: decode response: %w", err)
 	}

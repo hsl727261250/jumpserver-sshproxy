@@ -21,7 +21,11 @@ func TestCreateAndFinishSession(t *testing.T) {
 			if err := json.Unmarshal(content, &created); err != nil {
 				t.Errorf("decode create %s", err)
 			}
-			writeJSON(w, http.StatusCreated, map[string]string{"id": "core-sess"})
+			writeJSON(w, http.StatusCreated, map[string]any{
+				"id":           "core-sess",
+				"type":         map[string]string{"value": "tunnel", "label": "Tunnel"},
+				"error_reason": map[string]string{"value": "replay_unsupported", "label": "Replay unsupported"},
+			})
 		case r.Method == http.MethodPatch && r.URL.Path == "/api/v1/terminal/sessions/core-sess/":
 			if err := json.Unmarshal(content, &finished); err != nil {
 				t.Errorf("decode finish %s", err)
