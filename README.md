@@ -2,6 +2,10 @@
 
 SSHProxy 是 [JumpServer](https://github.com/jumpserver/jumpserver) 的 SSH 隧道组件。jumpserver的 koko 组件不支持端口转发, 此组件目标是为解决转发连接内网的需求, 并借助 jumpserver 账号和mfa认证体系做登录认证, 且可以在jumpserver管理后台查看活跃的会话.
 
+<img width="2523" height="636" alt="image" src="https://github.com/user-attachments/assets/756f3d27-4fb4-4196-aaed-3c01029ff36d" />
+<img width="2527" height="517" alt="image" src="https://github.com/user-attachments/assets/b39cb0d6-8be7-4cde-8c2f-e0d15b60db47" />
+
+
 ## 功能
 
 - 默认监听1024端口, 支持 `ssh -L` 和 `ssh -D` 的转发请求
@@ -83,4 +87,11 @@ config.yml 修改以下配置
 
 
 ## 客户端
+例如, 在datagrip中使用隧道时, 可以正常唤醒opt验证码输入
+
+这里填入jumpserver的用户名和密码
+<img width="1041" height="900" alt="image" src="https://github.com/user-attachments/assets/524ff05b-9f33-4818-87d5-0170e509d211" />
+
+初次进行连接时,或者认证过期时,有消息卡片弹出需要验证码, 点击 `Entry Password`, 输入验证码即可使用
+<img width="929" height="644" alt="image" src="https://github.com/user-attachments/assets/13988ab5-e7f8-4627-8866-70ecdf0e5468" />
 
