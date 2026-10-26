@@ -90,8 +90,10 @@ config.yml 修改以下配置
 例如, 在datagrip中使用隧道时, 可以正常唤醒opt验证码输入
 
 这里填入jumpserver的用户名和密码
-<img width="1041" height="900" alt="image" src="https://github.com/user-attachments/assets/524ff05b-9f33-4818-87d5-0170e509d211" />
+<img width="1040" height="900" alt="image" src="https://github.com/user-attachments/assets/12ea5506-02dd-42dd-9b35-0a602f5f3752" />
+
 
 初次进行连接时,或者认证过期时,有消息卡片弹出需要验证码, 点击 `Entry Password`, 输入验证码即可使用
-<img width="929" height="644" alt="image" src="https://github.com/user-attachments/assets/13988ab5-e7f8-4627-8866-70ecdf0e5468" />
+<img width="1108" height="714" alt="image" src="https://github.com/user-attachments/assets/53cc1043-16f0-487d-8990-5ad2c3262efa" />
+
 
