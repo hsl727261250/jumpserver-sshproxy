@@ -8,26 +8,27 @@ SSHProxy 是一个 SSH 隧道组件。它监听 `1024` 端口，使用 JumpServe
 
 ## 打包
 
-在项目目录执行：
+在 `docker` 目录执行：
 
 ```bash
+cd docker
 ./build.sh
 ```
 
-脚本用本机 Go 编译 Linux 二进制 `sshproxy`，再执行 `docker build` 生成本地镜像。标签来自 `.env` 里的 `SSHPROXY_IMAGE` 和 `SSHPROXY_VERSION`；还没有 `.env` 时使用 `example.env`。镜像内不安装 Go，也不在镜像里编译。脚本不登录仓库，也不推送镜像。
+脚本回到仓库根目录编译 Linux 二进制 `sshproxy`，再以仓库根目录为构建上下文执行 `docker build`。标签来自 `docker/.env` 里的 `SSHPROXY_IMAGE` 和 `SSHPROXY_VERSION`；还没有 `.env` 时使用 `docker/example.env`。镜像内不安装 Go，也不在镜像里编译。脚本不登录仓库，也不推送镜像。
 
 `go build` 使用本机已有的 Go 模块缓存。`docker build` 使用本地的 `debian:trixie-slim`，构建时把 apt 源换成阿里云开源镜像站，再安装 `ca-certificates` 和 `curl`。
 
-运行镜像基于 `debian:trixie-slim`。`Dockerfile` 只复制根目录的 `sshproxy`、`entrypoint.sh` 和 `config_example.yml`。工作目录是 `/opt/sshproxy`，监听端口是 `1024`，数据目录是 `/opt/sshproxy/data`。根目录的 `sshproxy` 已被 `.gitignore` 忽略。
+运行镜像基于 `debian:trixie-slim`。`docker/Dockerfile` 只复制仓库根目录的 `sshproxy`、`docker/entrypoint.sh` 和 `config_example.yml`。工作目录是 `/opt/sshproxy`，监听端口是 `1024`，数据目录是 `/opt/sshproxy/data`。根目录的 `sshproxy` 已被 `.gitignore` 忽略。
 
 ## 部署前准备
 
 JumpServer Core 需要允许组件注册，`BOOTSTRAP_TOKEN` 必须和 Core 配置里的值一致。Core 的健康检查地址是 `/api/health/`。容器设置了 `CORE_HOST` 后，入口脚本会一直等待这个地址返回成功，然后再启动进程。
 
-复制两个模板后再改配置。`.env` 和 `config.yml` 不要提交到仓库：
+复制两个模板后再改配置。`docker/.env` 和仓库根目录的 `config.yml` 不要提交到仓库：
 
 ```bash
-cp example.env .env
+cp docker/example.env docker/.env
 cp config_example.yml config.yml
 ```
 
@@ -41,9 +42,10 @@ cp config_example.yml config.yml
 
 ## 用 Compose 启动
 
-先执行 `./build.sh`。脚本按 `.env` 中的镜像名和版本打本地标签。`docker-compose.yml` 只引用 `.env`，启动时不重新构建，也不需要修改。
+先在 `docker` 目录执行 `./build.sh`。脚本按 `docker/.env` 中的镜像名和版本打本地标签。`docker/docker-compose.yml` 只引用同目录的 `.env`，并把仓库根目录的 `config.yml` 只读挂进容器。启动时不重新构建。
 
 ```bash
+cd docker
 docker compose up -d
 docker compose logs -f sshproxy
 ```
@@ -113,6 +115,7 @@ mkdir -p /opt/jumpserver-data/koko/data
 升级时重新打包本地镜像，再用 Compose 重建容器。这个宿主机目录会保留：
 
 ```bash
+cd docker
 ./build.sh
 docker compose up -d
 ```

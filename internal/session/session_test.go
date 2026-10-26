@@ -1,10 +1,10 @@
-package sshproxy_test
+package session_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/session"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/session"
 )
 
 func TestDue(t *testing.T) {

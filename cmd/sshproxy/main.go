@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/app"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/app"
 )
 
 var (

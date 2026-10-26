@@ -1,9 +1,9 @@
-package sshproxy_test
+package jmsauth_test
 
 import (
 	"testing"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
 )
 
 func TestParseLoadavg(t *testing.T) {

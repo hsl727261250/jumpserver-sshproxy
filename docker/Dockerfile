@@ -2,6 +2,7 @@ FROM debian:trixie-slim
 
 # trixie-slim 使用 DEB822 源。阿里云同时镜像 /debian 与 /debian-security，
 # 只替换主机名即可。安装 ca-certificates 之前使用 HTTP。
+# 构建上下文是仓库根目录。
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -9,7 +10,7 @@ RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debia
 
 WORKDIR /opt/sshproxy
 COPY sshproxy /opt/sshproxy/sshproxy
-COPY entrypoint.sh /opt/sshproxy/entrypoint.sh
+COPY docker/entrypoint.sh /opt/sshproxy/entrypoint.sh
 COPY config_example.yml /opt/sshproxy/config_example.yml
 RUN chmod 755 /opt/sshproxy/entrypoint.sh /opt/sshproxy/sshproxy
 

@@ -9,7 +9,7 @@ services:
       BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN}
     volumes:
       - ${SSHPROXY_DATA_DIR}:/opt/sshproxy/data
-      - ./config.yml:/opt/sshproxy/config.yml:ro
+      - ../config.yml:/opt/sshproxy/config.yml:ro
     networks:
       - core
 

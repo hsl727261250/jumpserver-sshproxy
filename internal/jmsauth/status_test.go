@@ -1,4 +1,4 @@
-package sshproxy_test
+package jmsauth_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
 )
 
 const statusPath = "/api/v1/terminal/status/"

@@ -1,10 +1,10 @@
-package sshproxy_test
+package jmsauth_test
 
 import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
 )
 
 func testKey() jmsauth.AccessKey {

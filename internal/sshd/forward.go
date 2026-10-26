@@ -11,9 +11,9 @@ import (
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/config"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/logger"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/session"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/config"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/logger"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/session"
 )
 
 const copyBufferSize = 32 * 1024

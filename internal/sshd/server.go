@@ -9,10 +9,10 @@ import (
 
 	"github.com/gliderlabs/ssh"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/auth"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/config"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/logger"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/auth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/config"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/logger"
 )
 
 const sshChannelDirectTCPIP = "direct-tcpip"

@@ -7,11 +7,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/config"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/logger"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/session"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/sshd"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/config"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/logger"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/session"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/sshd"
 )
 
 type App struct {

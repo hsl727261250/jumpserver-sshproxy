@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/logger"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/logger"
 )
 
 const statusInterval = 20 * time.Second

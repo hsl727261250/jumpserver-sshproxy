@@ -1,7 +1,8 @@
-package sshproxy_test
+package auth_test
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -11,9 +12,9 @@ import (
 
 	"github.com/gliderlabs/ssh"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/auth"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/session"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/auth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/session"
 )
 
 func TestPasswordSuccess(t *testing.T) {
@@ -102,4 +103,14 @@ func coreWith(t *testing.T, handler http.HandlerFunc) *jmsauth.Core {
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
 	return jmsauth.NewCore(server.URL, testKey(), time.Second)
+}
+
+func testKey() jmsauth.AccessKey {
+	return jmsauth.AccessKey{ID: "test-ak", Secret: "0123456789abcdef0123456789abcdef"}
+}
+
+func writeJSON(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
 }

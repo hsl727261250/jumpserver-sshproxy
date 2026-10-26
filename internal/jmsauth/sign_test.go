@@ -1,4 +1,4 @@
-package sshproxy_test
+package jmsauth_test
 
 import (
 	"crypto/aes"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
 )
 
 func TestServiceSignatureRoundTrip(t *testing.T) {

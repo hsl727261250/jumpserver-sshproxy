@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/config"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/config"
 )
 
 const (

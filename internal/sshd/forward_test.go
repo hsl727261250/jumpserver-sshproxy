@@ -1,4 +1,4 @@
-package sshproxy_test
+package sshd_test
 
 import (
 	"io"
@@ -10,9 +10,9 @@ import (
 
 	gossh "golang.org/x/crypto/ssh"
 
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/config"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/jmsauth"
-	"github.com/jumpserver/jumpserver-sshproxy/pkg/sshd"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/config"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/jmsauth"
+	"github.com/jumpserver/jumpserver-sshproxy/internal/sshd"
 )
 
 func TestAllowLocalForwardRequiresSession(t *testing.T) {
@@ -101,4 +101,8 @@ func newHTTPServer(t *testing.T, handler http.HandlerFunc) string {
 	go func() { _ = srv.Serve(ln) }()
 	t.Cleanup(func() { _ = srv.Close() })
 	return "http://" + ln.Addr().String()
+}
+
+func testKey() jmsauth.AccessKey {
+	return jmsauth.AccessKey{ID: "test-ak", Secret: "0123456789abcdef0123456789abcdef"}
 }
