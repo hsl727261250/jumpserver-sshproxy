@@ -28,7 +28,9 @@ type coreSession struct {
 	ID          string `json:"id,omitempty"`
 	User        string `json:"user,omitempty"`
 	UserID      string `json:"user_id,omitempty"`
+	Asset       string `json:"asset"`
 	AssetID     string `json:"asset_id,omitempty"`
+	OrgID       string `json:"org_id"`
 	Account     string `json:"account,omitempty"`
 	AccountID   string `json:"account_id,omitempty"`
 	Protocol    string `json:"protocol,omitempty"`
@@ -44,7 +46,9 @@ func (c *Core) CreateSession(ctx context.Context, spec SessionSpec) (string, err
 	body := coreSession{
 		User:        spec.User,
 		UserID:      spec.UserID,
+		Asset:       spec.AssetID,
 		AssetID:     spec.AssetID,
+		OrgID:       "",
 		Account:     spec.User,
 		AccountID:   spec.UserID,
 		Protocol:    sessionProtocol,

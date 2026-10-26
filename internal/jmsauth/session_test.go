@@ -53,6 +53,9 @@ func TestCreateAndFinishSession(t *testing.T) {
 	if created["user"] != "alice" || created["user_id"] != "user-1" || created["asset_id"] != "asset-1" {
 		t.Fatalf("identity %+v", created)
 	}
+	if created["asset"] != "asset-1" || created["org_id"] != "" {
+		t.Fatalf("asset org %+v", created)
+	}
 	if created["account"] != "alice" || created["account_id"] != "user-1" || created["remote_addr"] != "203.0.113.8" {
 		t.Fatalf("account %+v", created)
 	}
