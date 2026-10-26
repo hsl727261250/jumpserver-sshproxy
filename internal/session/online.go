@@ -3,6 +3,8 @@ package session
 import (
 	"sync"
 	"sync/atomic"
+
+	"github.com/jumpserver/jumpserver-sshproxy/internal/logger"
 )
 
 // Counter tracks authenticated SSH connections in this process.
@@ -83,10 +85,13 @@ func Terminate(id string) bool {
 	ran := false
 	item.once.Do(func() {
 		ran = true
+		user := ""
 		if item.session != nil {
 			item.session.Finish(ReasonAdminTerminate)
+			user = item.session.User
 		}
 		if item.close != nil {
+			logger.Infof("SSH session closed user=%s reason=%s core_session=%s", user, ReasonAdminTerminate, id)
 			item.close()
 		}
 	})
