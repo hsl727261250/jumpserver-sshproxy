@@ -1,6 +1,9 @@
 package session
 
-import "sync/atomic"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 // Counter tracks authenticated SSH connections in this process.
 // The count is not stored in Core and is lost when the process exits.
@@ -31,3 +34,61 @@ func Enter() { active.Enter() }
 func Leave() { active.Leave() }
 
 func Online() int { return active.Online() }
+
+type tracked struct {
+	session *Session
+	close   func()
+	once    sync.Once
+}
+
+var registry = struct {
+	mu    sync.Mutex
+	items map[string]*tracked
+}{items: map[string]*tracked{}}
+
+// Track remembers a Core session until Untrack. close runs once from Terminate.
+func Track(id string, s *Session, close func()) {
+	if id == "" {
+		return
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.items[id] = &tracked{session: s, close: close}
+}
+
+func Untrack(id string) {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	delete(registry.items, id)
+}
+
+func IDs() []string {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	ids := make([]string, 0, len(registry.items))
+	for id := range registry.items {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// Terminate marks the session as an administrator disconnect and closes it once.
+func Terminate(id string) bool {
+	registry.mu.Lock()
+	item := registry.items[id]
+	registry.mu.Unlock()
+	if item == nil {
+		return false
+	}
+	ran := false
+	item.once.Do(func() {
+		ran = true
+		if item.session != nil {
+			item.session.Finish(ReasonAdminTerminate)
+		}
+		if item.close != nil {
+			item.close()
+		}
+	})
+	return ran
+}

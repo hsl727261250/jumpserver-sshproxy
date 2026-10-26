@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -16,6 +15,8 @@ const statusInterval = 20 * time.Second
 
 const statusPath = "/api/v1/terminal/status/"
 
+const taskKillSession = "kill_session"
+
 type statusReport struct {
 	CPULoad       float64  `json:"cpu_load"`
 	MemoryUsed    float64  `json:"memory_used"`
@@ -24,52 +25,47 @@ type statusReport struct {
 	Sessions      []string `json:"sessions"`
 }
 
-func (c *Core) ReportStatus(ctx context.Context, sessions int) error {
+type terminalTask struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Args string `json:"args"`
+}
+
+func (c *Core) ReportStatus(ctx context.Context, online int, sessionIDs []string) ([]terminalTask, error) {
 	stat := readHostStat()
-	if sessions < 0 {
-		sessions = 0
+	if online < 0 {
+		online = 0
 	}
-	body, err := json.Marshal(statusReport{
+	if sessionIDs == nil {
+		sessionIDs = []string{}
+	}
+	content, _, err := c.signedJSON(ctx, http.MethodPost, statusPath, statusReport{
 		CPULoad:       stat.CPULoad,
 		MemoryUsed:    stat.MemoryUsed,
 		DiskUsed:      stat.DiskUsed,
-		SessionOnline: sessions,
-		Sessions:      []string{},
+		SessionOnline: online,
+		Sessions:      sessionIDs,
 	})
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("report status: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Host+statusPath, bytes.NewReader(body))
-	if err != nil {
-		return err
+	if len(bytes.TrimSpace(content)) == 0 {
+		return nil, nil
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "JumpServer-SSHProxy")
-	if err = setAccessKeyAuth(req, c.Key, time.Now()); err != nil {
-		return err
+	var tasks []terminalTask
+	if err = json.Unmarshal(content, &tasks); err != nil {
+		logger.Errorf("Decode component tasks failed: %s", err)
+		return nil, nil
 	}
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	content, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("report status: status %d: %s", resp.StatusCode, bytes.TrimSpace(content))
-	}
-	return nil
+	return tasks, nil
 }
 
 // KeepAlive reports component status until ctx is cancelled.
-// online returns the in-memory session count for this process.
-// The response task list is ignored. This component does not run terminal tasks.
-func (c *Core) KeepAlive(ctx context.Context, online func() int) {
-	if online == nil {
-		online = func() int { return 0 }
+// snapshot returns the session_online count and the Core session IDs to refresh.
+// kill closes the SSH connection for a kill_session task. Other tasks are ignored.
+func (c *Core) KeepAlive(ctx context.Context, snapshot func() (int, []string), kill func(sessionID string)) {
+	if snapshot == nil {
+		snapshot = func() (int, []string) { return 0, nil }
 	}
 	timer := time.NewTimer(0)
 	defer timer.Stop()
@@ -79,19 +75,37 @@ func (c *Core) KeepAlive(ctx context.Context, online func() int) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			count := online()
-			err := c.ReportStatus(ctx, count)
+			online, ids := snapshot()
+			tasks, err := c.ReportStatus(ctx, online, ids)
 			if err != nil && ctx.Err() == nil {
 				logger.Errorf("Report component status failed: %s", err)
 			}
 			if err == nil && !logged {
-				logger.Infof("Component status reported session_online=%d", count)
+				logger.Infof("Component status reported session_online=%d", online)
 				logged = true
 			}
 			if ctx.Err() != nil {
 				return
 			}
+			c.runKillTasks(ctx, tasks, kill)
+			if ctx.Err() != nil {
+				return
+			}
 			timer.Reset(statusInterval)
+		}
+	}
+}
+
+func (c *Core) runKillTasks(ctx context.Context, tasks []terminalTask, kill func(sessionID string)) {
+	for _, task := range tasks {
+		if task.Name != taskKillSession || task.ID == "" {
+			continue
+		}
+		if kill != nil && task.Args != "" {
+			kill(task.Args)
+		}
+		if err := c.FinishTask(ctx, task.ID); err != nil && ctx.Err() == nil {
+			logger.Errorf("Finish kill session task %s failed: %s", task.ID, err)
 		}
 	}
 }

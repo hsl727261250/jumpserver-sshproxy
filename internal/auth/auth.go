@@ -20,13 +20,14 @@ type clientKey struct{}
 type phaseKey struct{}
 
 type Authenticator struct {
-	core *jmsauth.Core
-	idle time.Duration
-	max  time.Duration
+	core    *jmsauth.Core
+	idle    time.Duration
+	max     time.Duration
+	assetID string
 }
 
-func NewAuthenticator(core *jmsauth.Core, idle, max time.Duration) *Authenticator {
-	return &Authenticator{core: core, idle: idle, max: max}
+func NewAuthenticator(core *jmsauth.Core, idle, max time.Duration, assetID string) *Authenticator {
+	return &Authenticator{core: core, idle: idle, max: max, assetID: assetID}
 }
 
 func (a *Authenticator) Password(ctx ssh.Context, password string) error {
@@ -69,11 +70,27 @@ func (a *Authenticator) finish(ctx ssh.Context, client *jmsauth.UserClient, resu
 		}
 		s := session.New(result.User.Username)
 		session.Store(ctx, s)
+		watchCtx, stopWatch := context.WithCancel(ctx)
+		coreID := a.openCoreSession(ctx, result.User, remoteIP(ctx.RemoteAddr()), s, func() {
+			stopWatch()
+			closeSSHConn(ctx)
+		})
 		logger.Infof("SSH conn[%s] session started user=%s", ctx.SessionID(), result.User.Username)
 		session.Enter()
 		go func() {
 			defer session.Leave()
-			session.Watch(ctx, s, a.idle, a.max, func() io.Closer {
+			defer stopWatch()
+			if coreID != "" {
+				defer func() {
+					finishCtx, cancel := finishContext(a.core)
+					defer cancel()
+					if err := a.core.FinishSession(finishCtx, coreID); err != nil {
+						logger.Errorf("SSH conn[%s] finish core session failed user=%s err=%s", ctx.SessionID(), s.User, err)
+					}
+					session.Untrack(coreID)
+				}()
+			}
+			session.Watch(watchCtx, s, a.idle, a.max, func() io.Closer {
 				conn, _ := ctx.Value(ssh.ContextKeyConn).(*gossh.ServerConn)
 				if conn == nil {
 					return nil
@@ -230,6 +247,51 @@ func needsChallenge(mfaType string) bool {
 	default:
 		return false
 	}
+}
+
+func (a *Authenticator) openCoreSession(ctx ssh.Context, user jmsauth.User, remoteAddr string, s *session.Session, close func()) string {
+	if a.assetID == "" {
+		return ""
+	}
+	if user.ID == "" {
+		logger.Errorf("SSH conn[%s] skip core session user=%s err=user id is empty", sessionID(ctx), user.Username)
+		return ""
+	}
+	id, err := a.core.CreateSession(ctx, jmsauth.SessionSpec{
+		User:       user.Username,
+		UserID:     user.ID,
+		AssetID:    a.assetID,
+		RemoteAddr: remoteAddr,
+	})
+	if err != nil {
+		logger.Errorf("SSH conn[%s] create core session failed user=%s err=%s", sessionID(ctx), user.Username, err)
+		return ""
+	}
+	session.Track(id, s, close)
+	logger.Infof("SSH conn[%s] core session %s user=%s", ctx.SessionID(), id, user.Username)
+	return id
+}
+
+func sessionID(ctx ssh.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	return ctx.SessionID()
+}
+
+func closeSSHConn(ctx ssh.Context) {
+	conn, _ := ctx.Value(ssh.ContextKeyConn).(*gossh.ServerConn)
+	if conn != nil {
+		_ = conn.Close()
+	}
+}
+
+func finishContext(core *jmsauth.Core) (context.Context, context.CancelFunc) {
+	timeout := core.Timeout
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	return context.WithTimeout(context.Background(), timeout)
 }
 
 func remoteIP(addr net.Addr) string {

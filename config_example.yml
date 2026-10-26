@@ -12,7 +12,7 @@ LOG_LEVEL: INFO
 HTTP_REQUEST_TIMEOUT: 30
 
 # 向 Core 注册时使用的终端类型。Core 没有 sshproxy 类型。
-# 状态上报使用这个类型下的独立组件，不领取终端任务。
+# 状态上报使用这个类型下的独立组件。配置 ASSET_ID 后会执行 kill_session。
 TERMINAL_TYPE: koko
 
 # direct-tcpip 拨号超时, 单位秒
@@ -23,3 +23,7 @@ MAX_IDLE_MINUTES: 30
 
 # 单条 SSH 连接的最长会话时间, 单位小时。0 表示不限制。
 MAX_SESSION_HOURS: 24
+
+# 创建 Core 会话时使用的资产 ID。为空则不创建会话。
+# 资产需要位于组件服务账号的默认组织。
+# ASSET_ID:

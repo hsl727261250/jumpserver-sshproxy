@@ -46,3 +46,30 @@ func TestCounter(t *testing.T) {
 		t.Fatalf("online %d", counter.Online())
 	}
 }
+
+func TestTerminateClosesOnce(t *testing.T) {
+	s := session.New("alice")
+	closed := 0
+	const id = "registry-test-session"
+	session.Track(id, s, func() { closed++ })
+	t.Cleanup(func() { session.Untrack(id) })
+	if !session.Terminate(id) || closed != 1 || s.Reason() != session.ReasonAdminTerminate {
+		t.Fatalf("closed %d reason %s", closed, s.Reason())
+	}
+	if session.Terminate(id) || closed != 1 {
+		t.Fatalf("second close %d", closed)
+	}
+	found := false
+	for _, got := range session.IDs() {
+		if got == id {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("session id was removed before untrack")
+	}
+	session.Untrack(id)
+	if session.Terminate(id) {
+		t.Fatal("terminated a removed session")
+	}
+}

@@ -21,6 +21,7 @@ type Config struct {
 	ForwardDialTimeout int    `yaml:"FORWARD_DIAL_TIMEOUT"`
 	MaxIdleMinutes     int    `yaml:"MAX_IDLE_MINUTES"`
 	MaxSessionHours    int    `yaml:"MAX_SESSION_HOURS"`
+	AssetID            string `yaml:"ASSET_ID"`
 
 	RootPath          string `yaml:"-"`
 	DataFolderPath    string `yaml:"-"`

@@ -37,7 +37,13 @@ func RunForever(confPath string) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go core.KeepAlive(ctx, session.Online)
+	go core.KeepAlive(ctx, func() (int, []string) {
+		if conf.AssetID == "" {
+			return session.Online(), nil
+		}
+		ids := session.IDs()
+		return len(ids), ids
+	}, func(id string) { session.Terminate(id) })
 	gracefulStop := make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	app := &App{sshSrv: sshd.NewSSHServer(core)}

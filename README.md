@@ -4,7 +4,7 @@ SSHProxy 是一个 SSH 隧道组件。它监听 `1024` 端口，使用 JumpServe
 
 认证成功后，客户端可以用这条 SSH 连接转发任意 TCP 流量，例如 `ssh -L` 和 `ssh -D`。组件不提供交互式 shell，也不提供 SFTP。
 
-启动时用 `BOOTSTRAP_TOKEN` 向 JumpServer Core 注册，并保存 AccessKey。之后的认证请求和状态上报都带服务账号签名，Core 才能记录真实的客户端 IP。注册类型默认是 `koko`，因为 Core 目前没有单独的 sshproxy 类型。进程每 20 秒向 Core 上报 CPU 负载、内存、磁盘，以及当前进程里的 SSH 连接数。这个连接数只在内存里计数，重启后从 0 开始，也不会写成 Core 会话。状态接口返回的终端任务会被忽略。
+启动时用 `BOOTSTRAP_TOKEN` 向 JumpServer Core 注册，并保存 AccessKey。之后的认证请求和状态上报都带服务账号签名，Core 才能记录真实的客户端 IP。注册类型默认是 `koko`，因为 Core 目前没有单独的 sshproxy 类型。进程每 20 秒向 Core 上报 CPU 负载、内存和磁盘。配置了 `ASSET_ID` 后，认证成功会创建一条 `proxy` 隧道会话，心跳在 `sessions` 里带上这条会话的 ID，连接断开时把会话标为结束。管理员在审计页终止会话后，组件在下一次心跳收到 `kill_session` 并关闭这条 SSH 连接。未配置 `ASSET_ID` 时只上报本进程里的连接数，`sessions` 为空，不会写成 Core 会话。除 `kill_session` 以外的终端任务会被忽略。会话 ID 只保存在内存里，进程退出后丢失。
 
 ## 打包
 
@@ -79,6 +79,7 @@ docker compose logs -f sshproxy
 | `FORWARD_DIAL_TIMEOUT` | `15` | 转发目标的拨号超时，单位秒 |
 | `MAX_IDLE_MINUTES` | `30` | 无转发流量时断开，`0` 表示不限制 |
 | `MAX_SESSION_HOURS` | `24` | 单条 SSH 连接的最长时间，`0` 表示不限制 |
+| `ASSET_ID` | 不填 | 创建 Core 会话使用的资产 ID。资产需在组件服务账号的默认组织中。不填则不创建会话 |
 
 ## 客户端使用
 

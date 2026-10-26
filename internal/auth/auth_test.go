@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,13 +28,95 @@ func TestPasswordSuccess(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fake := newFake(ctx, "alice")
-	err := auth.NewAuthenticator(core, 0, 0).Password(fake, "secret")
+	err := auth.NewAuthenticator(core, 0, 0, "").Password(fake, "secret")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if session.From(fake) == nil || session.From(fake).User != "alice" {
 		t.Fatal("session was not stored")
 	}
+}
+
+func TestCoreSessionCreateFailureStillAuthenticates(t *testing.T) {
+	core := coreWith(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/terminal/sessions/" {
+			http.Error(w, "no asset", http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{
+			"token": "token-1",
+			"user":  map[string]string{"id": "u1", "username": "alice"},
+		})
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fake := newFake(ctx, "alice")
+	err := auth.NewAuthenticator(core, 0, 0, "asset-1").Password(fake, "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range session.IDs() {
+		if id != "" {
+			t.Fatalf("tracked %s", id)
+		}
+	}
+}
+
+func TestPasswordCreatesCoreSession(t *testing.T) {
+	var finished atomic.Bool
+	core := coreWith(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/terminal/sessions/":
+			writeJSON(w, http.StatusCreated, map[string]string{"id": "core-sess"})
+		case r.Method == http.MethodPatch && r.URL.Path == "/api/v1/terminal/sessions/core-sess/":
+			finished.Store(true)
+			w.WriteHeader(http.StatusOK)
+		default:
+			writeJSON(w, http.StatusCreated, map[string]any{
+				"token": "token-1",
+				"user":  map[string]string{"id": "u1", "username": "alice"},
+			})
+		}
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	fake := newFake(ctx, "alice")
+	err := auth.NewAuthenticator(core, 0, 0, "asset-1").Password(fake, "secret")
+	if err != nil {
+		cancel()
+		t.Fatal(err)
+	}
+	found := false
+	for _, id := range session.IDs() {
+		if id == "core-sess" {
+			found = true
+		}
+	}
+	if !found {
+		cancel()
+		t.Fatal("core session was not tracked")
+	}
+	cancel()
+	deadline := time.Now().Add(2 * time.Second)
+	for !finished.Load() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !finished.Load() {
+		t.Fatal("core session was not finished")
+	}
+	deadline = time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		still := false
+		for _, id := range session.IDs() {
+			if id == "core-sess" {
+				still = true
+			}
+		}
+		if !still {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("core session stayed tracked")
 }
 
 func TestOTPRequiredAndRejected(t *testing.T) {
@@ -49,7 +132,7 @@ func TestOTPRequiredAndRejected(t *testing.T) {
 		}
 	})
 	fake := newFake(context.Background(), "alice")
-	err := auth.NewAuthenticator(core, 0, 0).Password(fake, "secret")
+	err := auth.NewAuthenticator(core, 0, 0, "").Password(fake, "secret")
 	partial, ok := err.(*ssh.PartialSuccessError)
 	if !ok || partial.Next.KeyboardInteractiveCallback == nil {
 		t.Fatalf("expected partial success, got %v", err)

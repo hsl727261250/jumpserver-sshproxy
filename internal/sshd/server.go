@@ -31,6 +31,7 @@ func NewSSHServer(core *jmsauth.Core) *Server {
 		core,
 		time.Duration(conf.MaxIdleMinutes)*time.Minute,
 		time.Duration(conf.MaxSessionHours)*time.Hour,
+		conf.AssetID,
 	)
 	srv := &ssh.Server{
 		Addr:            net.JoinHostPort(config.ListenHost, config.ListenPort),
