@@ -94,6 +94,6 @@ config.yml 修改以下配置
 
 
 初次进行连接时,或者认证过期时,有消息卡片弹出需要验证码, 点击 `Entry Password`, 输入验证码即可使用
-<img width="1108" height="714" alt="image" src="https://github.com/user-attachments/assets/53cc1043-16f0-487d-8990-5ad2c3262efa" />
+<img width="804" height="509" alt="image" src="https://github.com/user-attachments/assets/16859a15-7d35-47e0-a130-6068de6a1fa8" />
 
 
